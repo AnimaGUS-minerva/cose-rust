@@ -1,3 +1,8 @@
+#[cfg(feature = "std")]
+use std::{string::String, vec::Vec};
+#[cfg(not(feature = "std"))]
+use alloc::{string::String, vec::Vec};
+
 use cbor::CborType;
 
 /// Sig_structure is a CBOR array:

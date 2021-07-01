@@ -2,7 +2,12 @@ use test_setup as test;
 use {CoseError, SignatureAlgorithm};
 use decoder::{COSE_HEADER_ALG, COSE_HEADER_KID, COSE_SIGN_TAG, COSE_TYPE_ES256, decode_signature};
 use cbor::CborType;
-use std::collections::BTreeMap;
+
+#[cfg(feature = "std")]
+use std::{collections::BTreeMap, boxed::Box, vec::Vec};
+#[cfg(not(feature = "std"))]
+use alloc::{collections::BTreeMap, boxed::Box, vec::Vec};
+
 
 #[test]
 fn test_cose_decode() {

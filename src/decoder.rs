@@ -4,7 +4,12 @@ use cbor::CborType;
 use cbor::decoder::decode;
 use {CoseError, SignatureAlgorithm};
 use util::get_sig_struct_bytes;
-use std::collections::BTreeMap;
+
+#[cfg(feature = "std")]
+use std::{collections::BTreeMap, vec::Vec};
+#[cfg(not(feature = "std"))]
+use alloc::{collections::BTreeMap, vec::Vec};
+
 
 pub const COSE_SIGN_TAG: u64 = 98;
 
