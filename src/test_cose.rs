@@ -1,16 +1,25 @@
+#[cfg(feature = "std")]
 use test_setup as test;
+
 use {CoseError, SignatureAlgorithm};
 use decoder::{COSE_HEADER_ALG, COSE_HEADER_KID, COSE_SIGN_TAG, COSE_TYPE_ES256, decode_signature};
+
+#[cfg(feature = "std")]
 use cbor::CborType;
+#[cfg(not(feature = "std"))]
+use ::moz_cbor::CborType;
 
 #[cfg(feature = "std")]
 use std::{collections::BTreeMap, boxed::Box, vec::Vec};
 #[cfg(not(feature = "std"))]
-use alloc::{collections::BTreeMap, boxed::Box, vec::Vec};
+use ::alloc::{collections::BTreeMap, boxed::Box, vec::Vec};
 
 
 #[test]
 fn test_cose_decode() {
+    #[cfg(not(feature = "std"))]
+    use test_setup as test;
+
     let payload = b"This is the content.";
     let cose_signatures = decode_signature(&test::COSE_SIGNATURE_BYTES, payload).unwrap();
     assert_eq!(cose_signatures.len(), 1);
