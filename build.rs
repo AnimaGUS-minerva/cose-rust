@@ -14,6 +14,6 @@ fn main() {
 
     println!("cargo:rerun-if-changed=src/test_setup.rs");
     println!("cargo:rerun-if-changed=src/test_cose.rs");
-    expose_under_target("src/test_setup.rs", Some("expose_cose"), "test_setup.rs").unwrap();
-    expose_under_target("src/test_cose.rs", Some("expose_cose"), "test_cose.rs").unwrap();
+    expose_under_target("src/test_setup.rs", Some("refract_cose"), "test_setup.rs").unwrap();
+    expose_under_target("src/test_cose.rs", Some("refract_cose"), "test_cose.rs").unwrap();
 }
