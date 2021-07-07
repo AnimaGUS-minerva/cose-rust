@@ -14,6 +14,10 @@ moz_cbor = { git = "https://github.com/j-devel/cbor-rust", rev = "64184b7", defa
 [dev-dependencies]
 scopeguard = "0.3"
 
+[build-dependencies]
+#minerva_refract = { path = "../../AnimaGUS-minerva/refract" }
+minerva_refract = { git = "https://github.com/AnimaGUS-minerva/refract.git" }
+
 [lib]
 name = "cose"
 path = "src/cose.rs"
