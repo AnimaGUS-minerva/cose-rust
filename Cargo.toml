@@ -9,7 +9,7 @@ license = "MPL-2.0"
 build = "build.rs"
 
 [dependencies]
-moz_cbor = { git = "https://github.com/j-devel/cbor-rust", rev = "64184b7", default-features = false, features = ["core2"] }
+moz_cbor = { git = "https://github.com/j-devel/cbor-rust", rev = "3066819", default-features = false, features = ["core2"] }
 
 [dev-dependencies]
 scopeguard = "0.3"
