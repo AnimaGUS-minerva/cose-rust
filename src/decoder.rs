@@ -12,6 +12,7 @@ use alloc::{collections::BTreeMap, vec::Vec};
 
 
 pub const COSE_SIGN_TAG: u64 = 98;
+pub const COSE_SIGN_ONE_TAG: u64 = 18;
 
 /// The result of `decode_signature` holding a decoded COSE signature.
 #[derive(Debug)]
@@ -176,6 +177,20 @@ fn decode_signature_struct(
     })
 }
 
+fn decode_signature_one(cose_sign_array: &[CborType]) -> Result<Vec<CoseSignature>, CoseError> {
+    assert_eq!(cose_sign_array.len(), 4);
+
+    // ...
+
+    Ok(vec![CoseSignature { // WIP - dummy for now
+        signature_type: SignatureAlgorithm::ES256,
+        signature: Vec::new(),
+        signer_cert: Vec::new(),
+        certs: Vec::new(),
+        to_verify: Vec::new(),
+    }])
+}
+
 /// Decode COSE signature bytes and return a vector of `CoseSignature`.
 ///
 ///```rust,ignore
@@ -196,13 +211,14 @@ pub fn decode_signature(bytes: &[u8], payload: &[u8]) -> Result<Vec<CoseSignatur
         Err(_) => return Err(CoseError::DecodingFailure),
         Ok(value) => value,
     };
-    let cose_sign_array = match tagged_cose_sign {
+    let (tag, cose_sign_array) = match tagged_cose_sign {
         CborType::Tag(tag, cose_sign) => {
-            if tag != COSE_SIGN_TAG {
+            println!("@@ decode_signature(): tag: {:?}", tag);
+            if tag != COSE_SIGN_TAG && tag != COSE_SIGN_ONE_TAG {
                 return Err(CoseError::UnexpectedTag);
             }
             match *cose_sign {
-                CborType::Array(values) => values,
+                CborType::Array(values) => (tag, values),
                 _ => return Err(CoseError::UnexpectedType),
             }
         }
@@ -210,6 +226,11 @@ pub fn decode_signature(bytes: &[u8], payload: &[u8]) -> Result<Vec<CoseSignatur
     };
     if cose_sign_array.len() != 4 {
         return Err(CoseError::MalformedInput);
+    }
+    println!("@@ decode_signature(): cose_sign_array: {:?}", cose_sign_array);
+
+    if tag == COSE_SIGN_ONE_TAG { // @@ ad-hoc 'ish for now
+        return decode_signature_one(&cose_sign_array);
     }
 
     // The unprotected header section is expected to be an empty map.
