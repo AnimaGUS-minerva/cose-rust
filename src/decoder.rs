@@ -177,18 +177,17 @@ fn decode_signature_struct(
     })
 }
 
-fn decode_signature_one(cose_sign_array: &[CborType]) -> Result<Vec<CoseSignature>, CoseError> {
-    assert_eq!(cose_sign_array.len(), 4);
+// @@
+pub fn decode_signature_generic(bytes: &[u8]) -> Result<Vec<CoseSignature>, CoseError> {
+    let (tag, cose_sign_array) = get_cose_sign_array(bytes)?;
+    println!("@@ decode_signature_custom(): cose_sign_array: {:?}", cose_sign_array);
 
-    // ...
-
-    Ok(vec![CoseSignature { // WIP - dummy for now
-        signature_type: SignatureAlgorithm::ES256,
-        signature: Vec::new(),
-        signer_cert: Vec::new(),
-        certs: Vec::new(),
-        to_verify: Vec::new(),
-    }])
+    match tag {
+        COSE_SIGN_TAG => decode_signature_multiple(
+            &cose_sign_array, &vec![0] /* TODO */),
+        COSE_SIGN_ONE_TAG => decode_signature_single(&cose_sign_array),
+        _ => return Err(CoseError::UnexpectedTag),
+    }
 }
 
 /// Decode COSE signature bytes and return a vector of `CoseSignature`.
@@ -206,14 +205,27 @@ fn decode_signature_one(cose_sign_array: &[CborType]) -> Result<Vec<CoseSignatur
 /// )
 ///```
 pub fn decode_signature(bytes: &[u8], payload: &[u8]) -> Result<Vec<CoseSignature>, CoseError> {
+    let (tag, cose_sign_array) = get_cose_sign_array(bytes)?;
+
+    if tag != COSE_SIGN_TAG {
+        return Err(CoseError::UnexpectedTag);
+    }
+    println!("@@ decode_signature(): cose_sign_array: {:?}", cose_sign_array);
+
+    decode_signature_multiple(&cose_sign_array, payload)
+}
+
+// @@
+fn get_cose_sign_array(bytes: &[u8]) -> Result<(u64, Vec<CborType>), CoseError> {
     // This has to be a COSE_Sign object, which is a tagged array.
     let tagged_cose_sign = match decode(bytes) {
         Err(_) => return Err(CoseError::DecodingFailure),
         Ok(value) => value,
     };
+
     let (tag, cose_sign_array) = match tagged_cose_sign {
         CborType::Tag(tag, cose_sign) => {
-            println!("@@ decode_signature(): tag: {:?}", tag);
+            println!("@@ get_cose_sign_array(): tag: {:?}", tag);
             if tag != COSE_SIGN_TAG && tag != COSE_SIGN_ONE_TAG {
                 return Err(CoseError::UnexpectedTag);
             }
@@ -224,15 +236,16 @@ pub fn decode_signature(bytes: &[u8], payload: &[u8]) -> Result<Vec<CoseSignatur
         }
         _ => return Err(CoseError::UnexpectedType),
     };
+
     if cose_sign_array.len() != 4 {
         return Err(CoseError::MalformedInput);
     }
-    println!("@@ decode_signature(): cose_sign_array: {:?}", cose_sign_array);
 
-    if tag == COSE_SIGN_ONE_TAG { // @@ ad-hoc 'ish for now
-        return decode_signature_one(&cose_sign_array);
-    }
+    Ok((tag, cose_sign_array))
+}
 
+// @@
+fn decode_signature_multiple(cose_sign_array: &[CborType], payload: &[u8]) -> Result<Vec<CoseSignature>, CoseError> {
     // The unprotected header section is expected to be an empty map.
     ensure_empty_map(&cose_sign_array[1])?;
 
@@ -258,4 +271,18 @@ pub fn decode_signature(bytes: &[u8], payload: &[u8]) -> Result<Vec<CoseSignatur
     }
 
     Ok(result)
+}
+
+// @@
+fn decode_signature_single(_cose_sign_array: &[CborType]) -> Result<Vec<CoseSignature>, CoseError> {
+
+    // TODO
+
+    Ok(vec![CoseSignature { // WIP - dummy for now
+        signature_type: SignatureAlgorithm::ES256,
+        signature: Vec::new(),
+        signer_cert: Vec::new(),
+        certs: Vec::new(),
+        to_verify: Vec::new(),
+    }])
 }
