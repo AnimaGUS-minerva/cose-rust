@@ -178,16 +178,18 @@ fn decode_signature_struct(
 }
 
 // @@
-pub fn decode_signature_generic(bytes: &[u8]) -> Result<Vec<CoseSignature>, CoseError> {
-    let (tag, cose_sign_array) = get_cose_sign_array(bytes)?;
-    println!("@@ decode_signature_custom(): cose_sign_array: {:?}", cose_sign_array);
+pub fn decode_signature_generic(bytes: &[u8]) -> (u64, Result<Vec<CoseSignature>, CoseError>) {
+    let (tag, cose_sign_array) = get_cose_sign_array(bytes).unwrap();
+    println!("@@ decode_signature_generic(): cose_sign_array: {:?}", cose_sign_array);
 
-    match tag {
+    let result = match tag {
         COSE_SIGN_TAG => decode_signature_multiple(
             &cose_sign_array, &vec![0] /* TODO */),
         COSE_SIGN_ONE_TAG => decode_signature_single(&cose_sign_array),
-        _ => return Err(CoseError::UnexpectedTag),
-    }
+        _ => return (tag, Err(CoseError::UnexpectedTag)),
+    };
+
+    (tag, result)
 }
 
 /// Decode COSE signature bytes and return a vector of `CoseSignature`.
