@@ -215,7 +215,7 @@ pub fn decode_signature(bytes: &[u8], payload: &[u8]) -> Result<Vec<CoseSignatur
     decode_signature_multiple(&cose_sign_array, payload)
 }
 
-// @@
+
 fn get_cose_sign_array(bytes: &[u8]) -> Result<(u64, Vec<CborType>), CoseError> {
     // This has to be a COSE_Sign object, which is a tagged array.
     let tagged_cose_sign = match decode(bytes) {
@@ -244,7 +244,7 @@ fn get_cose_sign_array(bytes: &[u8]) -> Result<(u64, Vec<CborType>), CoseError> 
     Ok((tag, cose_sign_array))
 }
 
-// @@
+
 fn decode_signature_multiple(cose_sign_array: &[CborType], payload: &[u8]) -> Result<Vec<CoseSignature>, CoseError> {
     // The unprotected header section is expected to be an empty map.
     ensure_empty_map(&cose_sign_array[1])?;
@@ -274,15 +274,21 @@ fn decode_signature_multiple(cose_sign_array: &[CborType], payload: &[u8]) -> Re
 }
 
 // @@
-fn decode_signature_single(_cose_sign_array: &[CborType]) -> Result<Vec<CoseSignature>, CoseError> {
+fn decode_signature_single(cose_sign_array: &[CborType]) -> Result<Vec<CoseSignature>, CoseError> {
 
-    // TODO
+    // TODO [0] protected
+    // TODO [1] unprotected
+    // TODO [2] payload
 
-    Ok(vec![CoseSignature { // WIP - dummy for now
-        signature_type: SignatureAlgorithm::ES256,
-        signature: Vec::new(),
-        signer_cert: Vec::new(),
-        certs: Vec::new(),
-        to_verify: Vec::new(),
+    // [3] signature bytes
+    let signature_bytes = &cose_sign_array[3];
+    let signature_bytes = unpack!(Bytes, signature_bytes).clone();
+
+    Ok(vec![CoseSignature {
+        signature_type: SignatureAlgorithm::ES256, // TODO
+        signature: signature_bytes, // @@ ok
+        signer_cert: Vec::new(), // TODO
+        certs: Vec::new(), // TODO
+        to_verify: Vec::new(), // TODO
     }])
 }
