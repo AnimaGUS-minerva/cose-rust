@@ -3,7 +3,7 @@
 use cbor::CborType;
 use cbor::decoder::decode;
 use {CoseError, SignatureAlgorithm};
-use util::get_sig_struct_bytes;
+use util::{get_sig_struct_bytes, get_sig_one_struct_bytes};
 
 #[cfg(feature = "std")]
 use std::{collections::BTreeMap, vec::Vec};
@@ -280,7 +280,18 @@ fn decode_signature_single(cose_sign_array: &[CborType]) -> Result<Vec<CoseSigna
 
     // TODO [0] protected
     // TODO [1] unprotected
-    // TODO [2] payload
+
+    // WIP [2] payload
+    let signed_contents = &cose_sign_array[2];
+    let signed_contents = unpack!(Bytes, signed_contents).clone();
+
+    let sig_structure_bytes = get_sig_one_struct_bytes(
+        // protected_body_head.clone(),
+        // protected_signature_header_serialized.clone(),
+        //==== TODO
+        // zzzz
+        &signed_contents,
+    );
 
     // [3] signature bytes
     let signature_bytes = &cose_sign_array[3];
@@ -288,9 +299,9 @@ fn decode_signature_single(cose_sign_array: &[CborType]) -> Result<Vec<CoseSigna
 
     Ok(vec![CoseSignature {
         signature_type: SignatureAlgorithm::ES256, // TODO
-        signature: signature_bytes, // @@ ok
+        signature: signature_bytes,
         signer_cert: Vec::new(), // TODO
         certs: Vec::new(), // TODO
-        to_verify: Vec::new(), // TODO
+        to_verify: sig_structure_bytes,
     }])
 }
