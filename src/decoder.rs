@@ -277,31 +277,22 @@ fn decode_signature_multiple(cose_sign_array: &[CborType], payload: &[u8]) -> Re
 
 // @@
 fn decode_signature_single(cose_sign_array: &[CborType]) -> Result<Vec<CoseSignature>, CoseError> {
+    let bytes_from = |cbor: &CborType| Ok(unpack!(Bytes, cbor).clone());
 
     // TODO [0] protected
     // TODO [1] unprotected
 
-    // WIP [2] payload
-    let signed_contents = &cose_sign_array[2];
-    let signed_contents = unpack!(Bytes, signed_contents).clone();
-
-    let sig_structure_bytes = get_sig_one_struct_bytes(
-        // protected_body_head.clone(),
-        // protected_signature_header_serialized.clone(),
-        //==== TODO
-        // zzzz
-        &signed_contents,
-    );
-
-    // [3] signature bytes
-    let signature_bytes = &cose_sign_array[3];
-    let signature_bytes = unpack!(Bytes, signature_bytes).clone();
-
     Ok(vec![CoseSignature {
         signature_type: SignatureAlgorithm::ES256, // TODO
-        signature: signature_bytes,
+        // signature: signature_bytes,
+        signature: bytes_from(&cose_sign_array[3])?,
         signer_cert: Vec::new(), // TODO
         certs: Vec::new(), // TODO
-        to_verify: sig_structure_bytes,
+        to_verify: get_sig_one_struct_bytes(
+            // protected_body_head.clone(),
+            // protected_signature_header_serialized.clone(),
+            //==== TODO
+            // zzzz
+            &bytes_from(&cose_sign_array[2])?) // signed contents
     }])
 }
