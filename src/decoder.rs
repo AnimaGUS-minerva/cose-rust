@@ -114,18 +114,7 @@ fn decode_signature_struct(
         protected_signature_header,
         &CborType::Integer(COSE_HEADER_ALG),
     )?;
-    let signature_algorithm = match signature_algorithm {
-        CborType::SignedInteger(val) => {
-            match val {
-                COSE_TYPE_ES256 => SignatureAlgorithm::ES256,
-                COSE_TYPE_ES384 => SignatureAlgorithm::ES384,
-                COSE_TYPE_ES512 => SignatureAlgorithm::ES512,
-                COSE_TYPE_PS256 => SignatureAlgorithm::PS256,
-                _ => return Err(CoseError::UnexpectedHeaderValue),
-            }
-        }
-        _ => return Err(CoseError::UnexpectedType),
-    };
+    let signature_algorithm = resolve_alg(&signature_algorithm)?;
 
     let ee_cert = &get_map_value(
         protected_signature_header,
@@ -279,30 +268,34 @@ fn decode_signature_multiple(cose_sign_array: &[CborType], payload: &[u8]) -> Re
     Ok(result)
 }
 
+fn resolve_alg(alg: &CborType) -> Result<SignatureAlgorithm, CoseError> {
+    match alg {
+        CborType::SignedInteger(val) => {
+            Ok(match *val {
+                COSE_TYPE_ES256 => SignatureAlgorithm::ES256,
+                COSE_TYPE_ES384 => SignatureAlgorithm::ES384,
+                COSE_TYPE_ES512 => SignatureAlgorithm::ES512,
+                COSE_TYPE_PS256 => SignatureAlgorithm::PS256,
+                _ => return Err(CoseError::UnexpectedHeaderValue),
+            })
+        }
+        _ => return Err(CoseError::UnexpectedType),
+    }
+}
+
 // @@
 fn decode_signature_single(cose_sign_array: &[CborType]) -> Result<Vec<CoseSignature>, CoseError> {
     let bytes_from = |cbor: &CborType| Ok(unpack!(Bytes, cbor).clone());
-
+    let map_value_from =
+        |cbor: &CborType, key| get_map_value(unpack!(Map, cbor), key);
     let debug_permissive = true; // TODO kludge
 
     //
 
     let protected_bucket = &cose_sign_array[0];
     let signature_type = if let Ok(pb) = &decode(&bytes_from(protected_bucket)?) {
-        if let Ok(alg) = get_map_value(
-            unpack!(Map, pb), &CborType::Integer(COSE_HEADER_ALG)) {
-            match alg {
-                CborType::SignedInteger(val) => {
-                    match val {
-                        COSE_TYPE_ES256 => SignatureAlgorithm::ES256,
-                        COSE_TYPE_ES384 => SignatureAlgorithm::ES384,
-                        COSE_TYPE_ES512 => SignatureAlgorithm::ES512,
-                        COSE_TYPE_PS256 => SignatureAlgorithm::PS256,
-                        _ => return Err(CoseError::UnexpectedHeaderValue),
-                    }
-                }
-                _ => return Err(CoseError::UnexpectedType),
-            }
+        if let Ok(alg) = map_value_from(pb, &CborType::Integer(COSE_HEADER_ALG)) {
+            resolve_alg(&alg)?
         } else if debug_permissive {
             println!("⚠️ debug_permissive: missing `signature_type` patched with `SignatureAlgorithm::ES256`");
             SignatureAlgorithm::ES256 // kludge
@@ -316,10 +309,9 @@ fn decode_signature_single(cose_sign_array: &[CborType]) -> Result<Vec<CoseSigna
     //
 
     let unprotected_bucket = &cose_sign_array[1];
-    let signer_cert = if let Ok(kid) = &get_map_value(
-        unpack!(Map, unprotected_bucket),
-        &CborType::Integer(COSE_HEADER_KID)) {
-        unpack!(Bytes, kid).clone()
+    let kid = map_value_from(unprotected_bucket, &CborType::Integer(COSE_HEADER_KID));
+    let signer_cert = if let Ok(kid) = kid {
+        bytes_from(&kid)?
     } else if debug_permissive {
         println!("⚠️ debug_permissive: missing `signer_cert` patched with `Vec::new()`");
         Vec::new() // kludge
