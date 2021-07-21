@@ -180,7 +180,11 @@ fn decode_signature_struct(
 // @@
 pub fn decode_signature_generic(bytes: &[u8]) -> (u64, Result<Vec<CoseSignature>, CoseError>) {
     let (tag, cose_sign_array) = get_cose_sign_array(bytes).unwrap();
-    println!("@@ decode_signature_generic(): cose_sign_array: {:?}", cose_sign_array);
+
+    println!("@@ decode_signature_generic():");
+    cose_sign_array.iter().enumerate().for_each(|(i, cbor)| {
+        println!("  cose_sign_array[{}]: {:?}", i, cbor);
+    });
 
     let result = match tag {
         COSE_SIGN_TAG => decode_signature_multiple(
@@ -279,20 +283,15 @@ fn decode_signature_multiple(cose_sign_array: &[CborType], payload: &[u8]) -> Re
 fn decode_signature_single(cose_sign_array: &[CborType]) -> Result<Vec<CoseSignature>, CoseError> {
     let bytes_from = |cbor: &CborType| Ok(unpack!(Bytes, cbor).clone());
 
-    // TODO [0] protected
     // TODO [1] unprotected
 
     Ok(vec![CoseSignature {
         signature_type: SignatureAlgorithm::ES256, // TODO
-        // signature: signature_bytes,
         signature: bytes_from(&cose_sign_array[3])?,
         signer_cert: Vec::new(), // TODO
         certs: Vec::new(), // TODO
         to_verify: get_sig_one_struct_bytes(
-            // protected_body_head.clone(),
-            // protected_signature_header_serialized.clone(),
-            //==== TODO
-            // zzzz
+            cose_sign_array[0].clone(), // protected
             &bytes_from(&cose_sign_array[2])?) // signed contents
     }])
 }
