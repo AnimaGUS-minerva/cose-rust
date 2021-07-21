@@ -283,15 +283,59 @@ fn decode_signature_multiple(cose_sign_array: &[CborType], payload: &[u8]) -> Re
 fn decode_signature_single(cose_sign_array: &[CborType]) -> Result<Vec<CoseSignature>, CoseError> {
     let bytes_from = |cbor: &CborType| Ok(unpack!(Bytes, cbor).clone());
 
-    // TODO [1] unprotected
+    let debug_permissive = true; // TODO kludge
+
+    //
+
+    let protected_bucket = &cose_sign_array[0];
+    let signature_type = if let Ok(pb) = &decode(&bytes_from(protected_bucket)?) {
+        if let Ok(alg) = get_map_value(
+            unpack!(Map, pb), &CborType::Integer(COSE_HEADER_ALG)) {
+            match alg {
+                CborType::SignedInteger(val) => {
+                    match val {
+                        COSE_TYPE_ES256 => SignatureAlgorithm::ES256,
+                        COSE_TYPE_ES384 => SignatureAlgorithm::ES384,
+                        COSE_TYPE_ES512 => SignatureAlgorithm::ES512,
+                        COSE_TYPE_PS256 => SignatureAlgorithm::PS256,
+                        _ => return Err(CoseError::UnexpectedHeaderValue),
+                    }
+                }
+                _ => return Err(CoseError::UnexpectedType),
+            }
+        } else if debug_permissive {
+            println!("⚠️ debug_permissive: missing `signature_type` patched with `SignatureAlgorithm::ES256`");
+            SignatureAlgorithm::ES256 // kludge
+        } else {
+            return Err(CoseError::MissingHeader);
+        }
+    } else {
+        return Err(CoseError::DecodingFailure);
+    };
+
+    //
+
+    let unprotected_bucket = &cose_sign_array[1];
+    let signer_cert = if let Ok(kid) = &get_map_value(
+        unpack!(Map, unprotected_bucket),
+        &CborType::Integer(COSE_HEADER_KID)) {
+        unpack!(Bytes, kid).clone()
+    } else if debug_permissive {
+        println!("⚠️ debug_permissive: missing `signer_cert` patched with `Vec::new()`");
+        Vec::new() // kludge
+    } else {
+        return Err(CoseError::MissingHeader);
+    };
+
+    //
 
     Ok(vec![CoseSignature {
-        signature_type: SignatureAlgorithm::ES256, // TODO
+        signature_type,
         signature: bytes_from(&cose_sign_array[3])?,
-        signer_cert: Vec::new(), // TODO
+        signer_cert,
         certs: Vec::new(), // TODO
         to_verify: get_sig_one_struct_bytes(
-            cose_sign_array[0].clone(), // protected
+            protected_bucket.clone(), // protected bucket
             &bytes_from(&cose_sign_array[2])?) // signed contents
     }])
 }
