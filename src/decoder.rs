@@ -308,10 +308,15 @@ fn decode_signature_single(cose_sign_array: &[CborType]) -> Result<Vec<CoseSigna
 
     //
 
+    // TODO ?? - similar logic for `COSE_HEADER_KID` against `unprotected_bucket`
+
+    // TODO this logic should be in 'voucher.rs'
+    pub const COSE_HEADER_VOUCHER_PUBKEY: u64 = 60299;
+
     let unprotected_bucket = &cose_sign_array[1];
-    let kid = map_value_from(unprotected_bucket, &CborType::Integer(COSE_HEADER_KID));
-    let signer_cert = if let Ok(kid) = kid {
-        bytes_from(&kid)?
+    let val = map_value_from(unprotected_bucket, &CborType::Integer(COSE_HEADER_VOUCHER_PUBKEY));
+    let signer_cert = if let Ok(val) = val {
+        bytes_from(&val)?
     } else if debug_permissive {
         println!("⚠️ debug_permissive: missing `signer_cert` patched with `Vec::new()`");
         Vec::new() // kludge
@@ -325,9 +330,8 @@ fn decode_signature_single(cose_sign_array: &[CborType]) -> Result<Vec<CoseSigna
         signature_type,
         signature: bytes_from(&cose_sign_array[3])?,
         signer_cert,
-        certs: Vec::new(), // TODO
+        certs: Vec::new(), // TODO ??
         to_verify: get_sig_one_struct_bytes(
-            protected_bucket.clone(), // protected bucket
-            &bytes_from(&cose_sign_array[2])?) // signed contents
+            protected_bucket.clone(), &bytes_from(&cose_sign_array[2])?)
     }])
 }
