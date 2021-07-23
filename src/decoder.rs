@@ -10,9 +10,14 @@ use std::{collections::BTreeMap, vec::Vec};
 #[cfg(not(feature = "std"))]
 use alloc::{collections::BTreeMap, vec::Vec};
 
-
 pub const COSE_SIGN_TAG: u64 = 98;
 pub const COSE_SIGN_ONE_TAG: u64 = 18;
+
+// @@
+pub enum CoseSignData {
+    CoseSign(Vec<CoseSignature>),
+    CoseSignOne(CoseSignature),
+}
 
 /// The result of `decode_signature` holding a decoded COSE signature.
 #[derive(Debug)]
@@ -167,7 +172,7 @@ fn decode_signature_struct(
 }
 
 // @@
-pub fn decode_signature_generic(bytes: &[u8]) -> (u64, Result<Vec<CoseSignature>, CoseError>) {
+pub fn decode_signature_generic(bytes: &[u8]) -> Result<CoseSignData, CoseError> {
     let (tag, cose_sign_array) = get_cose_sign_array(bytes).unwrap();
 
     println!("@@ decode_signature_generic():");
@@ -175,14 +180,12 @@ pub fn decode_signature_generic(bytes: &[u8]) -> (u64, Result<Vec<CoseSignature>
         println!("  cose_sign_array[{}]: {:?}", i, cbor);
     });
 
-    let result = match tag {
-        COSE_SIGN_TAG => decode_signature_multiple(
-            &cose_sign_array, &vec![0] /* TODO */),
-        COSE_SIGN_ONE_TAG => decode_signature_single(&cose_sign_array),
-        _ => return (tag, Err(CoseError::UnexpectedTag)),
-    };
-
-    (tag, result)
+    match tag {
+        COSE_SIGN_TAG => Ok(CoseSignData::CoseSign(decode_signature_multiple(
+            &cose_sign_array, &vec![0] /* TODO */)?)),
+        COSE_SIGN_ONE_TAG => Ok(CoseSignData::CoseSignOne(decode_signature_single(&cose_sign_array)?)),
+        _ => return Err(CoseError::UnexpectedTag),
+    }
 }
 
 /// Decode COSE signature bytes and return a vector of `CoseSignature`.
@@ -284,7 +287,7 @@ fn resolve_alg(alg: &CborType) -> Result<SignatureAlgorithm, CoseError> {
 }
 
 // @@
-fn decode_signature_single(cose_sign_array: &[CborType]) -> Result<Vec<CoseSignature>, CoseError> {
+fn decode_signature_single(cose_sign_array: &[CborType]) -> Result<CoseSignature, CoseError> {
     let bytes_from = |cbor: &CborType| Ok(unpack!(Bytes, cbor).clone());
     let map_value_from =
         |cbor: &CborType, key| get_map_value(unpack!(Map, cbor), key);
@@ -326,12 +329,12 @@ fn decode_signature_single(cose_sign_array: &[CborType]) -> Result<Vec<CoseSigna
 
     //
 
-    Ok(vec![CoseSignature {
+    Ok(CoseSignature {
         signature_type,
         signature: bytes_from(&cose_sign_array[3])?,
         signer_cert,
         certs: Vec::new(), // TODO ??
         to_verify: get_sig_one_struct_bytes(
             protected_bucket.clone(), &bytes_from(&cose_sign_array[2])?)
-    }])
+    })
 }
