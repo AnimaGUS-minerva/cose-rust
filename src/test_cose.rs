@@ -1,7 +1,7 @@
 #[cfg(feature = "std")]
 use test_setup as test;
 
-use {CoseError, SignatureAlgorithm};
+use crate::{CoseError, SignatureAlgorithm};
 use decoder::{COSE_HEADER_ALG, COSE_HEADER_KID, COSE_SIGN_TAG, COSE_TYPE_ES256, decode_signature};
 
 #[cfg(feature = "std")]

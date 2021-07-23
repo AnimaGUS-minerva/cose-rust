@@ -1,9 +1,9 @@
 //! Parse and decode COSE signatures.
 
-use cbor::CborType;
-use cbor::decoder::decode;
-use {CoseError, SignatureAlgorithm};
-use util::{get_sig_struct_bytes, get_sig_one_struct_bytes};
+pub use cbor::CborType;
+pub use cbor::decoder::decode;
+pub use crate::{CoseError, SignatureAlgorithm};
+pub use crate::util::{get_sig_struct_bytes, get_sig_one_struct_bytes};
 
 #[cfg(feature = "std")]
 use std::{collections::BTreeMap, vec::Vec};
@@ -12,12 +12,6 @@ use alloc::{collections::BTreeMap, vec::Vec};
 
 pub const COSE_SIGN_TAG: u64 = 98;
 pub const COSE_SIGN_ONE_TAG: u64 = 18;
-
-// @@
-pub enum CoseSignData {
-    CoseSign(Vec<CoseSignature>),
-    CoseSignOne(CoseSignature),
-}
 
 /// The result of `decode_signature` holding a decoded COSE signature.
 #[derive(Debug)]
@@ -37,6 +31,7 @@ pub const COSE_TYPE_PS256: i64 = -37;
 pub const COSE_HEADER_ALG: u64 = 1;
 pub const COSE_HEADER_KID: u64 = 4;
 
+#[macro_export]
 macro_rules! unpack {
    ($to:tt, $var:ident) => (
         match *$var {
@@ -48,7 +43,7 @@ macro_rules! unpack {
     )
 }
 
-fn get_map_value(
+pub fn get_map_value(
     map: &BTreeMap<CborType, CborType>,
     key: &CborType,
 ) -> Result<CborType, CoseError> {
@@ -171,23 +166,6 @@ fn decode_signature_struct(
     })
 }
 
-// @@
-pub fn decode_signature_generic(bytes: &[u8]) -> Result<CoseSignData, CoseError> {
-    let (tag, cose_sign_array) = get_cose_sign_array(bytes).unwrap();
-
-    println!("@@ decode_signature_generic():");
-    cose_sign_array.iter().enumerate().for_each(|(i, cbor)| {
-        println!("  cose_sign_array[{}]: {:?}", i, cbor);
-    });
-
-    match tag {
-        COSE_SIGN_TAG => Ok(CoseSignData::CoseSign(decode_signature_multiple(
-            &cose_sign_array, &vec![0] /* TODO */)?)),
-        COSE_SIGN_ONE_TAG => Ok(CoseSignData::CoseSignOne(decode_signature_single(&cose_sign_array)?)),
-        _ => return Err(CoseError::UnexpectedTag),
-    }
-}
-
 /// Decode COSE signature bytes and return a vector of `CoseSignature`.
 ///
 ///```rust,ignore
@@ -214,7 +192,7 @@ pub fn decode_signature(bytes: &[u8], payload: &[u8]) -> Result<Vec<CoseSignatur
 }
 
 
-fn get_cose_sign_array(bytes: &[u8]) -> Result<(u64, Vec<CborType>), CoseError> {
+pub fn get_cose_sign_array(bytes: &[u8]) -> Result<(u64, Vec<CborType>), CoseError> {
     // This has to be a COSE_Sign object, which is a tagged array.
     let tagged_cose_sign = match decode(bytes) {
         Err(_) => return Err(CoseError::DecodingFailure),
@@ -243,7 +221,7 @@ fn get_cose_sign_array(bytes: &[u8]) -> Result<(u64, Vec<CborType>), CoseError> 
 }
 
 
-fn decode_signature_multiple(cose_sign_array: &[CborType], payload: &[u8]) -> Result<Vec<CoseSignature>, CoseError> {
+pub fn decode_signature_multiple(cose_sign_array: &[CborType], payload: &[u8]) -> Result<Vec<CoseSignature>, CoseError> {
     // The unprotected header section is expected to be an empty map.
     ensure_empty_map(&cose_sign_array[1])?;
 
@@ -271,7 +249,7 @@ fn decode_signature_multiple(cose_sign_array: &[CborType], payload: &[u8]) -> Re
     Ok(result)
 }
 
-fn resolve_alg(alg: &CborType) -> Result<SignatureAlgorithm, CoseError> {
+pub fn resolve_alg(alg: &CborType) -> Result<SignatureAlgorithm, CoseError> {
     match alg {
         CborType::SignedInteger(val) => {
             Ok(match *val {
@@ -284,57 +262,4 @@ fn resolve_alg(alg: &CborType) -> Result<SignatureAlgorithm, CoseError> {
         }
         _ => return Err(CoseError::UnexpectedType),
     }
-}
-
-// @@
-fn decode_signature_single(cose_sign_array: &[CborType]) -> Result<CoseSignature, CoseError> {
-    let bytes_from = |cbor: &CborType| Ok(unpack!(Bytes, cbor).clone());
-    let map_value_from =
-        |cbor: &CborType, key| get_map_value(unpack!(Map, cbor), key);
-    let debug_permissive = true; // TODO kludge
-
-    //
-
-    let protected_bucket = &cose_sign_array[0];
-    let signature_type = if let Ok(pb) = &decode(&bytes_from(protected_bucket)?) {
-        if let Ok(alg) = map_value_from(pb, &CborType::Integer(COSE_HEADER_ALG)) {
-            resolve_alg(&alg)?
-        } else if debug_permissive {
-            println!("⚠️ debug_permissive: missing `signature_type` patched with `SignatureAlgorithm::ES256`");
-            SignatureAlgorithm::ES256 // kludge
-        } else {
-            return Err(CoseError::MissingHeader);
-        }
-    } else {
-        return Err(CoseError::DecodingFailure);
-    };
-
-    //
-
-    // TODO ?? - similar logic for `COSE_HEADER_KID` against `unprotected_bucket`
-
-    // TODO this logic should be in 'voucher.rs'
-    pub const COSE_HEADER_VOUCHER_PUBKEY: u64 = 60299;
-
-    let unprotected_bucket = &cose_sign_array[1];
-    let val = map_value_from(unprotected_bucket, &CborType::Integer(COSE_HEADER_VOUCHER_PUBKEY));
-    let signer_cert = if let Ok(val) = val {
-        bytes_from(&val)?
-    } else if debug_permissive {
-        println!("⚠️ debug_permissive: missing `signer_cert` patched with `Vec::new()`");
-        Vec::new() // kludge
-    } else {
-        return Err(CoseError::MissingHeader);
-    };
-
-    //
-
-    Ok(CoseSignature {
-        signature_type,
-        signature: bytes_from(&cose_sign_array[3])?,
-        signer_cert,
-        certs: Vec::new(), // TODO ??
-        to_verify: get_sig_one_struct_bytes(
-            protected_bucket.clone(), &bytes_from(&cose_sign_array[2])?)
-    })
 }
