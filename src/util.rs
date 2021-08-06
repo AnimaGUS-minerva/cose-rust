@@ -25,7 +25,8 @@ pub fn get_sig_struct_bytes(
     let sig_structure_array: Vec<CborType> = vec![CborType::String(String::from("Signature")),
                                                   protected_body_header_serialized,
                                                   protected_signature_header_serialized,
-                                                  CborType::Null,
+                                                  //CborType::Null, // orig
+                                                  CborType::Bytes(vec![]), // @@ TODO audit this ?fix
                                                   CborType::Bytes(payload.to_vec())];
 
     CborType::Array(sig_structure_array).serialize()
@@ -38,7 +39,8 @@ pub fn get_sig_one_struct_bytes(
 ) -> Vec<u8> {
     let sig_structure_array: Vec<CborType> = vec![CborType::String(String::from("Signature1")),
                                                   protected_body_header_serialized,
-                                                  CborType::Null,
+                                                  //CborType::Null, // orig
+                                                  CborType::Bytes(vec![]), // @@ TODO audit this ?fix
                                                   CborType::Bytes(payload.to_vec())];
 
     CborType::Array(sig_structure_array).serialize()
