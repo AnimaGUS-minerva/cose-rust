@@ -186,7 +186,6 @@ pub fn decode_signature(bytes: &[u8], payload: &[u8]) -> Result<Vec<CoseSignatur
     if tag != COSE_SIGN_TAG {
         return Err(CoseError::UnexpectedTag);
     }
-    println!("@@ decode_signature(): cose_sign_array: {:?}", cose_sign_array);
 
     decode_signature_multiple(&cose_sign_array, payload)
 }
@@ -201,7 +200,6 @@ pub fn get_cose_sign_array(bytes: &[u8]) -> Result<(u64, Vec<CborType>), CoseErr
 
     let (tag, cose_sign_array) = match tagged_cose_sign {
         CborType::Tag(tag, cose_sign) => {
-            println!("@@ get_cose_sign_array(): tag: {:?}", tag);
             if tag != COSE_SIGN_TAG && tag != COSE_SIGN_ONE_TAG {
                 return Err(CoseError::UnexpectedTag);
             }
