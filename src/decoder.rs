@@ -14,7 +14,7 @@ pub const COSE_SIGN_TAG: u64 = 98;
 pub const COSE_SIGN_ONE_TAG: u64 = 18;
 
 /// The result of `decode_signature` holding a decoded COSE signature.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct CoseSignature {
     pub signature_type: SignatureAlgorithm,
     pub signature: Vec<u8>,
