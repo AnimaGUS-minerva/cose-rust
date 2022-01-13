@@ -1,6 +1,6 @@
 //! Parse and decode COSE signatures.
 
-pub use cbor::CborType;
+pub use cbor::{CborType, CborError};
 pub use cbor::decoder::decode;
 pub use crate::{CoseError, SignatureAlgorithm};
 pub use crate::util::{get_sig_struct_bytes, get_sig_one_struct_bytes};
