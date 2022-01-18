@@ -69,6 +69,7 @@ pub enum CoseError {
 /// to be 32 bytes.
 #[derive(Debug)]
 #[derive(PartialEq)]
+#[derive(Copy, Clone)]
 pub enum SignatureAlgorithm {
     ES256,
     ES384,
