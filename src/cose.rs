@@ -46,7 +46,7 @@ pub mod decoder;
 pub mod util;
 
 /// Errors that can be returned from COSE functions.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum CoseError {
     DecodingFailure,
     LibraryFailure,
